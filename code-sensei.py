@@ -1,13 +1,19 @@
 import streamlit as st
 import time
 from streamlit_option_menu import option_menu
+import os
+import openai
 
+openai.api_key = os.getenv("CODE_SENSEI_OPENAI_KEY")
 
 def set_chat_history():
     pass
 
 def load_past_chats():
     st.session_state['past_chats'] = ['Empty Tinker']*10
+
+if 'chat_just_starting' not in st.session_state:
+    st.session_state['chat_just_starting'] = True
 
 if 'chatting_status' not in st.session_state:
     st.session_state.chatting_status = False
@@ -81,7 +87,7 @@ def main():
             st.button('New Tinker')
             st.session_state.selected_chat_history = option_menu('Old chats',st.session_state.past_chats)
         st.session_state.chat_input = st.chat_input('Paste Your Code Snippet Here')
-        if len(st.session_state.chat_history)==0:
+        if st.session_state.chat_just_starting==True:
             cols = st.columns([0.2]+([0.1]*8))
             st.container(height=170,border=False)
             ct = st.container(height=200,border=False)
@@ -92,21 +98,37 @@ def main():
                 cols = st.columns([0.2,0.8,0.2])
                 with cols[1]:
                     st.markdown('#### I\'d love to help you interprete codes faster')
-            st.session_state.chat_history.append(dict())
+            st.session_state.chat_just_starting = False
+            print('Here')
         else:
+            print('chat_started')
             if st.session_state.chat_input!=None:
-                response = "Testing Response" # ping OpenAI and return response
-                st.session_state.chat_history[-1] = {
-                    'user':st.session_state.chat_input,
-                    'ai':response
-                }
+                st.session_state.chat_history.append({
+                    'role':'user',
+                    'content':st.session_state.chat_input
+                })
+                code_response = openai.chat.completions.create(
+                    model='gpt-3.5-turbo',
+                    messages=st.session_state.chat_history
+                )
+                # code_explaination = "Testing Explaination"
+                st.session_state.chat_history.apapend({
+                    'role':'ai',
+                    'content':code_response.choices[0].message.content
+                })
+                # st.session_state.chat_history.apapend({
+                #     'role':'ai',
+                #     'content':code_explaination
+                # })
                 st.session_state.chat_history.append({})
                 print('length of chat history:{}'.format(len(st.session_state.chat_history)))
                 for message in st.session_state.chat_history[:-1]:
-                    with st.chat_message('user'):
-                        st.markdown(message['user'])
-                    with st.chat_message('ai'):
-                        st.markdown(message['ai'])
+                    with st.chat_message(message['role']):
+                        st.markdown(message['content'])
+                    with st.chat_message('role'):
+                        st.code(message['content'])
+                    # with st.chat_message('ai'):
+                    #     st.markdown(message['ai_'])
         # print(len(st.session_state.chat_history))
 
 if __name__=='__main__':

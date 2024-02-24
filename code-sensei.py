@@ -30,15 +30,17 @@ def generate_code_and_explanation(prompt):
     )
     return  response.choices[0].message.content
 
-def set_chat_history(chat_name):
+def set_chat_history(chat_name:str):
     signed_up_email = st.session_state.collection.find_one({'email':st.session_state.email})
-    st.session_state.chat_history = [
-        signed_up_email['chats']['user_query'],
-        signed_up_email['chats']['code_response'],
-        signed_up_email['chats']['explain_prompt'],
-        signed_up_email['chats']['explaination']
-    ]
-    st.session_state.chat_name = signed_up_email['chats']['chat_name']
+    st.session_state.chat_history = signed_up_email[chat_name]
+    st.session_state.chat_name = chat_name
+
+    for message_index,message in enumerate(st.session_state.chat_history[0]):
+        with st.chat_message(st.session_state.chat_history[0][message_index]['role']):
+            st.markdown(st.session_state.chat_history[0][message_index]['content'])
+        with st.chat_message(st.session_state.chat_history[1][message_index]['role']):
+            st.code(st.session_state.chat_history[1][message_index]['content'],language=st.session_state.user_language,line_numbers=True)
+            st.markdown(st.session_state.chat_history[3][message_index]['content'])
 
 def load_past_chats():
     st.session_state['past_chats'] = ['Empty Tinker']*10
@@ -129,18 +131,11 @@ def main():
             with col[0]:
                 st.session_state.chat_name = st.text_input('',value=st.session_state.chat_name)
             st.write(' ')
-            st.write('Previous Tinker Sessions')
             signed_up_email = st.session_state.collection.find_one({'email':st.session_state.email})
-            if 'chats' in signed_up_email:
-                with st.container(height=400):
-                    for chat in [key for key in signed_up_email if key not in ['_id','email','name','username','education','track','user_language']]:
-                        cols = st.columns([0.8,0.2])
-                        with cols[0]:
-                            st.text_input('',value=chat, key=chat,disabled=True)
-                        with cols[1]:
-                            st.write(' ')
-                            st.write(' ')
-                            st.button("✅",key='btn_'+chat)
+            with st.expander('Previous Tinker Sessions',expanded=True):
+                for chat in [k for k in signed_up_email if k not in ['_id','email','name','username','education','track','language']]:
+                    print(type(chat))
+                    st.button(chat, key=chat,on_click=set_chat_history,args=[chat])
 
         st.session_state.chat_input = st.chat_input('What do you want your code to do?')
         if st.session_state.chat_just_starting==True:

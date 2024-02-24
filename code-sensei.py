@@ -6,6 +6,23 @@ import openai
 
 openai.api_key = os.getenv("CODE_SENSEI_OPENAI_KEY")
 
+import pymongo
+from pymongo import MongoClient
+
+if 'db_connect' not in st.session_state:
+    print('Attmemting MongoDB connection.................')
+    st.session_state.cluster = MongoClient("mongodb+srv://olatejuemmanuel:code-senseiAT-Africa@code-sensei.l7r5ghh.mongodb.net/?retryWrites=true&w=majority&appName=code-sensei")
+    try:
+        st.session_state.cluster.admin.command('ping')
+        print("Pinged your deployment. You successfully connected to MongoDB!")
+    except Exception as e:
+        print(e)
+        exit()
+    time.sleep(3)
+    st.session_state.db = st.session_state.cluster["coding-bot"]
+    st.session_state.collection = st.session_state.db["users_info"]
+    st.session_state.db_connect = True
+
 def generate_code_and_explanation(prompt):
     response = openai.chat.completions.create(
         model='gpt-3.5-turbo',
@@ -13,8 +30,15 @@ def generate_code_and_explanation(prompt):
     )
     return  response.choices[0].message.content
 
-def set_chat_history():
-    pass
+def set_chat_history(chat_name):
+    signed_up_email = st.session_state.collection.find_one({'email':st.session_state.email})
+    st.session_state.chat_history = [
+        signed_up_email['chats']['user_query'],
+        signed_up_email['chats']['code_response'],
+        signed_up_email['chats']['explain_prompt'],
+        signed_up_email['chats']['explaination']
+    ]
+    st.session_state.chat_name = signed_up_email['chats']['chat_name']
 
 def load_past_chats():
     st.session_state['past_chats'] = ['Empty Tinker']*10
@@ -26,48 +50,44 @@ if 'chatting_status' not in st.session_state:
     st.session_state.chatting_status = False
 
 if 'selected_chat_history' not in st.session_state:
-    st.session_state.selected_chat_history = None
+    st.session_state.selected_chat_history = st.session_state.chat_name ='Current Tinker'
 
-if st.session_state.selected_chat_history==None:
+if st.session_state.selected_chat_history==None or st.session_state.selected_chat_history=='Current Tinker':
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = [[],[],[],[]]
         st.session_state.messages = []
     else:
         st.session_state.selected_chat_history = 'New Chat'
-else:
-    set_chat_history()
 
 
 def chatting():
+    print('chatting Entered')
+    signed_up_email = st.session_state.collection.find_one({
+        "email":st.session_state.email
+    })
+    if signed_up_email:
+        print("email found in collection")
+        st.session_state.email = signed_up_email['email']
+        st.session_state.name = signed_up_email['name']
+        st.session_state.username = signed_up_email['username']
+        st.session_state.education = signed_up_email['education']
+        st.session_state.track = signed_up_email['track']
+        st.session_state.user_language = signed_up_email['language']
+    else:
+        st.session_state.collection.insert_one({
+                "email":st.session_state.email,
+                "name":st.session_state.name,
+                "username":st.session_state.username,
+                "education":st.session_state.education,
+                "track":st.session_state.track,
+                "language":st.session_state.user_language
+            })
+        print('successfully inserted into database')
+    time.sleep(3)
     st.session_state.chatting_status = True
 
 def switch_to_chat_page():
     st.switch_page("./pages/chat.py")
-
-def signup():
-    signup_sidebar = st.sidebar
-    with signup_sidebar:
-        st.session_state.email = st.text_input('email',key='signup_email')
-        st.session_state.name = st.text_input('name')
-        st.session_state.username = st.text_input('username')
-        st.session_state.education = st.selectbox('Education Level',['','Primary','Secondary','Undergraduate','Post-graduate'])
-        st.session_state.track = st.selectbox('Preferred Track',['','Software Engineering','Data Science','DevOps','Cyber Security'])
-        st.session_state.user_language = st.selectbox('Primary Language',['','Python','C#','C++','C','Javascript','Pseudocode'])
-        #Temprorary
-        st.session_state.user_language = 'python'
-        col1, col2, col3 = st.columns([0.33]*3)
-        with col2:
-            st.button('Sign Up',on_click=chatting,key='sign_up')
-
-def login():
-    #Temprorary
-    st.session_state.user_language = 'python'
-    login_sidebar = st.sidebar
-    with login_sidebar:
-        st.session_state.email = st.text_input('email',key='login_email')
-        col1, col2, col3 = st.columns([0.33]*3)
-        with col2:
-            st.button('Log In',on_click=chatting,key='log_in')
 
 st.set_page_config(
     page_title="🧠 code-sensei",
@@ -79,7 +99,7 @@ def main():
     if st.session_state.chatting_status==False:
         ct1 = st.container(height=200,border=False)
         ct2 = st.container(height=110,border=False)
-        ct3 = st.container(height=240,border=False)
+        ct3 = st.container(height=260,border=False)
         with ct3:
             cols = st.columns([0.32,0.3,0.18])
             with cols[1]:
@@ -87,17 +107,41 @@ def main():
             col1, col2, col3 = st.columns([0.38,0.32,0.4])
             with col2:
                 st.markdown('## code-sensei')
-            col1, col2, col3, col4, col5, col6 = st.columns([0.167]*6)
+            col1, col2, col3, col4, col5 = st.columns([0.2]*5)
             with col3:
-                st.button("Log In",on_click=login)
-            with col4:
-                st.button("Sign Up",on_click=signup)
+                st.button("Log In / Sign Up")
         ct4 = st.container(height=100,border=False)
         ct5 = st.container(height=100,border=False)
+        with st.sidebar:
+            st.session_state.email = st.text_input('email',key='signup_email')
+            st.session_state.name = st.text_input('name')
+            st.session_state.username = st.text_input('username')
+            st.session_state.education = st.selectbox('Education Level',['','Primary','Secondary','Undergraduate','Post-graduate'])
+            st.session_state.track = st.selectbox('Preferred Track',['','Software Engineering','Data Science','DevOps','Cyber Security'])
+            st.session_state.user_language = st.selectbox('Primary Language',['','Python','C#','C++','C','Javascript','Pseudocode'])
+            col1, col2, col3 = st.columns([0.33]*3)
+            with col2:
+                st.button('Sign Up/Login',on_click=chatting,key='sign_up')
+
     else:
         with st.sidebar:
-            st.button('New Tinker')
-            st.session_state.selected_chat_history = option_menu('Old chats',st.session_state.past_chats)
+            col = st.columns([0.99])
+            with col[0]:
+                st.session_state.chat_name = st.text_input('',value=st.session_state.chat_name)
+            st.write(' ')
+            st.write('Previous Tinker Sessions')
+            signed_up_email = st.session_state.collection.find_one({'email':st.session_state.email})
+            if 'chats' in signed_up_email:
+                with st.container(height=400):
+                    for chat in [key for key in signed_up_email if key not in ['_id','email','name','username','education','track','user_language']]:
+                        cols = st.columns([0.8,0.2])
+                        with cols[0]:
+                            st.text_input('',value=chat, key=chat,disabled=True)
+                        with cols[1]:
+                            st.write(' ')
+                            st.write(' ')
+                            st.button("✅",key='btn_'+chat)
+
         st.session_state.chat_input = st.chat_input('What do you want your code to do?')
         if st.session_state.chat_just_starting==True:
             cols = st.columns([0.2]+([0.1]*8))
@@ -139,6 +183,16 @@ def main():
                     'content':code_explaination
                 })
                 
+                st.session_state.collection.update_one(
+                    {'email':st.session_state.email},
+                    {'$set':{st.session_state.chat_name:[
+                        st.session_state.chat_history[0],
+                        st.session_state.chat_history[1],
+                        st.session_state.chat_history[2],
+                        st.session_state.chat_history[3]
+                    ]}}
+                )
+
                 print('length of chat history:{}'.format(len(st.session_state.chat_history)))
                 for message_index,message in enumerate(st.session_state.chat_history[0]):
                     with st.chat_message(message['role']):

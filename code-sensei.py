@@ -36,8 +36,8 @@ def set_chat_history(chat_name:str):
     st.session_state.chat_name = chat_name
 
     for message_index,message in enumerate(st.session_state.chat_history[0]):
-        with st.chat_message(st.session_state.chat_history[0][message_index]['role']):
-            st.markdown(st.session_state.chat_history[0][message_index]['content'])
+        with st.chat_message(st.session_state.chat_history[4][message_index]['role']):
+            st.markdown(st.session_state.chat_history[4][message_index]['content'])
         with st.chat_message(st.session_state.chat_history[1][message_index]['role']):
             st.code(st.session_state.chat_history[1][message_index]['content'],language=st.session_state.user_language,line_numbers=True)
             st.markdown(st.session_state.chat_history[3][message_index]['content'])
@@ -56,7 +56,7 @@ if 'selected_chat_history' not in st.session_state:
 
 if st.session_state.selected_chat_history==None or st.session_state.selected_chat_history=='Current Tinker':
     if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = [[],[],[],[]]
+        st.session_state.chat_history = [[],[],[],[],[]]
         st.session_state.messages = []
     else:
         st.session_state.selected_chat_history = 'New Chat'
@@ -155,6 +155,10 @@ def main():
             print('chat_started')
             if st.session_state.chat_input!=None:
                 st.session_state.messages.append(st.session_state.chat_input)
+                st.session_state.chat_history[4].append({
+                    'role':'user',
+                    'content':st.session_state.chat_input
+                })
                 prompt = f'Write a {st.session_state.user_language} code that {st.session_state.chat_input} and then explain it'
                 st.session_state.chat_history[0].append({
                     'role':'user',
@@ -184,14 +188,14 @@ def main():
                         st.session_state.chat_history[0],
                         st.session_state.chat_history[1],
                         st.session_state.chat_history[2],
-                        st.session_state.chat_history[3]
+                        st.session_state.chat_history[3],
+                        st.session_state.chat_history[4]
                     ]}}
                 )
 
-                print('length of chat history:{}'.format(len(st.session_state.chat_history)))
                 for message_index,message in enumerate(st.session_state.chat_history[0]):
-                    with st.chat_message(message['role']):
-                        st.markdown(st.session_state.messages[message_index])
+                    with st.chat_message(st.session_state.chat_history[4][message_index]['role']):
+                        st.markdown(st.session_state.chat_history[4][message_index]['content'])
                     with st.chat_message(st.session_state.chat_history[1][message_index]['role']):
                         st.code(st.session_state.chat_history[1][message_index]['content'],language=st.session_state.user_language,line_numbers=True)
                         st.markdown(st.session_state.chat_history[3][message_index]['content'])

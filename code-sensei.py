@@ -9,12 +9,12 @@ import pymongo
 from pymongo import MongoClient
 
 
-openai.api_key = st.secrets("code_sensei_openai_key")
+openai.api_key = st.secrets["code_sensei_openai_key"]
 
 if 'db_connect' not in st.session_state:
     print('Attmemting MongoDB connection.................')
     # st.session_state.cluster = MongoClient("mongodb+srv://olatejuemmanuel:code-senseiAT-Africa@code-sensei.l7r5ghh.mongodb.net/?retryWrites=true&w=majority&appName=code-sensei")
-    st.session_state.cluster = MongoClient(st.secrets("mongo_url"))
+    st.session_state.cluster = MongoClient(st.secrets["mongo_url"])
     try:
         st.session_state.cluster.admin.command('ping')
         print("Pinged your deployment. You successfully connected to MongoDB!")

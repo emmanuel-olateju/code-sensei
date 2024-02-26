@@ -8,16 +8,13 @@ import yaml
 import pymongo
 from pymongo import MongoClient
 
-with open('secrets.yaml', 'r') as file:
-        secrets = yaml.safe_load(file)
 
-# openai.api_key = os.getenv("CODE_SENSEI_OPENAI_KEY")
-openai.api_key = secrets['OPEN_API_KEY']
+openai.api_key = st.secrets("code_sensei_openai_key")
 
 if 'db_connect' not in st.session_state:
     print('Attmemting MongoDB connection.................')
     # st.session_state.cluster = MongoClient("mongodb+srv://olatejuemmanuel:code-senseiAT-Africa@code-sensei.l7r5ghh.mongodb.net/?retryWrites=true&w=majority&appName=code-sensei")
-    st.session_state.cluster = MongoClient(secrets['MONGO_URL'])
+    st.session_state.cluster = MongoClient(st.secrets("mongo_url"))
     try:
         st.session_state.cluster.admin.command('ping')
         print("Pinged your deployment. You successfully connected to MongoDB!")
